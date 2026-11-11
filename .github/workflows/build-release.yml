@@ -1,0 +1,85 @@
+name: Build release artifacts
+
+# Builds the Prowlarr linux tarball from this fork and attaches it to the GitHub release.
+# Trigger: tag push (v*) or manual run against an existing tag.
+# Consumed by binhex/arch-prowlarr via build/root/install.sh (Option A).
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to build and upload to (e.g. v3.1.0)'
+        required: true
+        type: string
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  build-linux:
+    name: linux-core-x64
+    runs-on: ubuntu-latest
+
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+          fetch-depth: 0
+
+      - name: Resolve version from tag
+        run: |
+          set -euo pipefail
+          echo "PROWLARRVERSION=${TAG#v}" >> "$GITHUB_ENV"
+
+      - name: Set up .NET (global.json pins the SDK)
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install yarn
+        run: npm install --global yarn@1.22.22
+
+      - name: Install frontend dependencies
+        run: yarn install --frozen-lockfile --network-timeout 600000
+
+      # -r takes a real .NET RID. To also ship arm, add a matrix:
+      #   matrix: { rid: [linux-x64, linux-arm64, linux-arm],
+      #             artifact: [linux-core-x64, linux-core-arm64, linux-core-arm] }
+      - name: Build and package
+        run: ./build.sh --backend --frontend --packages -r linux-x64 -f net10.0
+
+      - name: Create tarball and checksum
+        run: |
+          set -euo pipefail
+          ASSET="Prowlarr.master.${PROWLARRVERSION}.linux-core-x64.tar.gz"
+          tar -C _artifacts/linux-x64/net10.0 -czf "${ASSET}" Prowlarr
+          sha256sum "${ASSET}" > "${ASSET}.sha256"
+          ls -lh "${ASSET}" "${ASSET}.sha256"
+          echo "ASSET=${ASSET}" >> "$GITHUB_ENV"
+
+      - name: Upload assets to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if ! gh release view "${TAG}" >/dev/null 2>&1; then
+            gh release create "${TAG}" --title "${TAG}" --target "${GITHUB_SHA}" --generate-notes
+          fi
+          gh release upload "${TAG}" "${ASSET}" "${ASSET}.sha256" --clobber
+          gh release view "${TAG}" --json assets --jq '.assets[].name'
