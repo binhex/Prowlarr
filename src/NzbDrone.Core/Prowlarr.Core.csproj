@@ -9,7 +9,7 @@
     <PackageReference Include="Diacritical.Net" Version="1.0.5" />
     <PackageReference Include="MailKit" Version="4.18.2" />
     <PackageReference Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" Version="10.0.14" />
-    <PackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="10.0.14" />
+    <PackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="10.0.15" />
     <PackageReference Include="NLog.Targets.Syslog" Version="7.0.0" />
     <PackageReference Include="Npgsql" Version="10.0.3" />
     <PackageReference Include="Polly" Version="8.9.0" />

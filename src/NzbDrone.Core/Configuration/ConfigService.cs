@@ -88,6 +88,61 @@ namespace NzbDrone.Core.Configuration
             set { SetValue("LogIndexerResponse", value); }
         }
 
+        // Indexer Automation
+        public bool IndexerAutomationEnabled
+        {
+            get { return GetValueBoolean("IndexerAutomationEnabled", false); }
+            set { SetValue("IndexerAutomationEnabled", value); }
+        }
+
+        public string IndexerAutomationProtocols
+        {
+            get { return GetValue("IndexerAutomationProtocols", "[]"); }
+            set { SetValue("IndexerAutomationProtocols", value); }
+        }
+
+        public string IndexerAutomationLanguages
+        {
+            get { return GetValue("IndexerAutomationLanguages", "[]"); }
+            set { SetValue("IndexerAutomationLanguages", value); }
+        }
+
+        public string IndexerAutomationPrivacy
+        {
+            get { return GetValue("IndexerAutomationPrivacy", "[]"); }
+            set { SetValue("IndexerAutomationPrivacy", value); }
+        }
+
+        public string IndexerAutomationCategories
+        {
+            get { return GetValue("IndexerAutomationCategories", "[]"); }
+            set { SetValue("IndexerAutomationCategories", value); }
+        }
+
+        public int IndexerAutomationTestTimeoutSeconds
+        {
+            get { return GetValueInt("IndexerAutomationTestTimeoutSeconds", 60); }
+            set { SetValue("IndexerAutomationTestTimeoutSeconds", value); }
+        }
+
+        public int IndexerAutomationRetryDays
+        {
+            get { return GetValueInt("IndexerAutomationRetryDays", 7); }
+            set { SetValue("IndexerAutomationRetryDays", value); }
+        }
+
+        public int IndexerAutomationRemovalDays
+        {
+            get { return GetValueInt("IndexerAutomationRemovalDays", 14); }
+            set { SetValue("IndexerAutomationRemovalDays", value); }
+        }
+
+        public int IndexerAutomationMaxAddsPerPass
+        {
+            get { return GetValueInt("IndexerAutomationMaxAddsPerPass", 3); }
+            set { SetValue("IndexerAutomationMaxAddsPerPass", value); }
+        }
+
         public int FirstDayOfWeek
         {
             get { return GetValueInt("FirstDayOfWeek", (int)CultureInfo.CurrentCulture.DateTimeFormat.FirstDayOfWeek); }

@@ -27,6 +27,17 @@ function Settings() {
 
         <Link
           className={styles.link}
+          to="/settings/indexers/automation"
+        >
+          {translate('IndexerAutomation')}
+        </Link>
+
+        <div className={styles.summary}>
+          {translate('IndexerAutomationSettingsSummary')}
+        </div>
+
+        <Link
+          className={styles.link}
           to="/settings/applications"
         >
           {translate('Apps')}

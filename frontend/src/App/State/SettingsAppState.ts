@@ -8,6 +8,7 @@ import Application from 'typings/Application';
 import DownloadClient from 'typings/DownloadClient';
 import Notification from 'typings/Notification';
 import General from 'typings/Settings/General';
+import IndexerAutomation from 'typings/Settings/IndexerAutomation';
 import UiSettings from 'typings/Settings/UiSettings';
 
 export interface AppProfileAppState
@@ -33,6 +34,10 @@ export interface GeneralAppState
   extends AppSectionItemState<General>,
     AppSectionSaveState {}
 
+export interface IndexerAutomationAppState
+  extends AppSectionItemState<IndexerAutomation>,
+    AppSectionSaveState {}
+
 export interface IndexerCategoryAppState
   extends AppSectionState<IndexerCategory>,
     AppSectionDeleteState,
@@ -49,6 +54,7 @@ interface SettingsAppState {
   applications: ApplicationAppState;
   downloadClients: DownloadClientAppState;
   general: GeneralAppState;
+  indexerAutomation: IndexerAutomationAppState;
   indexerCategories: IndexerCategoryAppState;
   notifications: NotificationAppState;
   ui: UiSettingsAppState;

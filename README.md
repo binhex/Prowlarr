@@ -23,6 +23,7 @@ Prowlarr is an indexer manager/proxy built on the popular \*arr .net/reactjs bas
 - Parameter based manual searching
 - Support for pushing multiple releases at once directly to your download clients from Prowlarr
 - Indexer health and status notifications
+- Automatic indexer management: add indexers matching protocol, language, privacy and category criteria, and remove indexers that stay in a failed state
 - Per Indexer proxy support (SOCKS4, SOCKS5, HTTP, Flaresolverr)
 
 ## Support

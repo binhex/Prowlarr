@@ -7,6 +7,7 @@ import development from './Settings/development';
 import downloadClientCategories from './Settings/downloadClientCategories';
 import downloadClients from './Settings/downloadClients';
 import general from './Settings/general';
+import indexerAutomation from './Settings/indexerAutomation';
 import indexerCategories from './Settings/indexerCategories';
 import indexerProxies from './Settings/indexerProxies';
 import notifications from './Settings/notifications';
@@ -15,6 +16,7 @@ import ui from './Settings/ui';
 export * from './Settings/downloadClientCategories';
 export * from './Settings/downloadClients';
 export * from './Settings/general';
+export * from './Settings/indexerAutomation';
 export * from './Settings/indexerCategories';
 export * from './Settings/indexerProxies';
 export * from './Settings/notifications';
@@ -37,6 +39,7 @@ export const defaultState = {
   downloadClientCategories: downloadClientCategories.defaultState,
   downloadClients: downloadClients.defaultState,
   general: general.defaultState,
+  indexerAutomation: indexerAutomation.defaultState,
   indexerCategories: indexerCategories.defaultState,
   indexerProxies: indexerProxies.defaultState,
   notifications: notifications.defaultState,
@@ -67,6 +70,7 @@ export const actionHandlers = handleThunks({
   ...downloadClientCategories.actionHandlers,
   ...downloadClients.actionHandlers,
   ...general.actionHandlers,
+  ...indexerAutomation.actionHandlers,
   ...indexerCategories.actionHandlers,
   ...indexerProxies.actionHandlers,
   ...notifications.actionHandlers,
@@ -88,6 +92,7 @@ export const reducers = createHandleActions({
   ...downloadClientCategories.reducers,
   ...downloadClients.reducers,
   ...general.reducers,
+  ...indexerAutomation.reducers,
   ...indexerCategories.reducers,
   ...indexerProxies.reducers,
   ...notifications.reducers,

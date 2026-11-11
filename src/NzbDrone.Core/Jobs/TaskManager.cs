@@ -11,6 +11,7 @@ using NzbDrone.Core.Configuration.Events;
 using NzbDrone.Core.HealthCheck;
 using NzbDrone.Core.History;
 using NzbDrone.Core.Housekeeping;
+using NzbDrone.Core.Indexers.Automation;
 using NzbDrone.Core.IndexerVersions;
 using NzbDrone.Core.Lifecycle;
 using NzbDrone.Core.Messaging.Commands;
@@ -104,6 +105,12 @@ namespace NzbDrone.Core.Jobs
                     {
                         Interval = 24 * 60,
                         TypeName = typeof(IndexerDefinitionUpdateCommand).FullName
+                    },
+
+                    new ScheduledTask
+                    {
+                        Interval = 60,
+                        TypeName = typeof(IndexerAutomationCommand).FullName
                     },
 
                     new ScheduledTask

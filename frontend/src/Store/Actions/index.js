@@ -4,6 +4,7 @@ import * as commands from './commandActions';
 import * as customFilters from './customFilterActions';
 import * as history from './historyActions';
 import * as indexers from './indexerActions';
+import * as indexerAutomation from './indexerAutomationActions';
 import * as indexerHistory from './indexerHistoryActions';
 import * as indexerIndex from './indexerIndexActions';
 import * as indexerStats from './indexerStatsActions';
@@ -29,6 +30,7 @@ export default [
   releases,
   localization,
   indexers,
+  indexerAutomation,
   indexerHistory,
   indexerIndex,
   indexerStats,

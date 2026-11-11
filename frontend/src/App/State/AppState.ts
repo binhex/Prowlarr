@@ -1,3 +1,4 @@
+import IndexerAutomationState from 'typings/IndexerAutomationState';
 import CommandAppState from './CommandAppState';
 import HistoryAppState from './HistoryAppState';
 import IndexerAppState, {
@@ -54,10 +55,19 @@ export interface AppSectionState {
   };
 }
 
+export interface IndexerAutomationAppState {
+  isFetching: boolean;
+  isPopulated: boolean;
+  error?: unknown;
+  actionError?: unknown;
+  items: IndexerAutomationState[];
+}
+
 interface AppState {
   app: AppSectionState;
   commands: CommandAppState;
   history: HistoryAppState;
+  indexerAutomation: IndexerAutomationAppState;
   indexerHistory: IndexerHistoryAppState;
   indexerIndex: IndexerIndexAppState;
   indexerStats: IndexerStatsAppState;

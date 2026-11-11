@@ -11,6 +11,7 @@ using NzbDrone.Core.Datastore.Converters;
 using NzbDrone.Core.Download;
 using NzbDrone.Core.IndexerProxies;
 using NzbDrone.Core.Indexers;
+using NzbDrone.Core.Indexers.Automation;
 using NzbDrone.Core.IndexerVersions;
 using NzbDrone.Core.Instrumentation;
 using NzbDrone.Core.Jobs;
@@ -58,6 +59,8 @@ namespace NzbDrone.Core.Datastore
                   .Ignore(i => i.SupportsPagination)
                   .Ignore(i => i.Capabilities)
                   .HasOne(a => a.AppProfile, a => a.AppProfileId);
+
+            Mapper.Entity<IndexerAutomationState>("IndexerAutomationStates").RegisterModel();
 
             Mapper.Entity<DownloadClientDefinition>("DownloadClients").RegisterModel()
                   .Ignore(x => x.ImplementationName)

@@ -1,6 +1,6 @@
 # Indexer Automation (auto add / remove) — Design
 
-- **Status:** Approved (design), not implemented
+- **Status:** Implemented (see the review ledgers for residual findings)
 - **Date:** 2026-11-11
 - **Repository:** `/data/forks/Prowlarr` (fork of Prowlarr, branch `develop`, v3.0.2)
 - **Scope:** Prowlarr core (`.NET`), API v1, React settings UI
@@ -92,13 +92,15 @@ An **empty dimension is unconstrained**, so enabling with only categories select
 
 | Column | Notes |
 | --- | --- |
-| `Key` | Unique. Native: `Implementation` (e.g. `Anidex`). Cardigann: `Cardigann:<definition file>` |
+| `Key` | Unique and rename-stable. Native: `Implementation` (e.g. `Anidex`) — never the user-editable display name. Cardigann: `Cardigann:<definition file>` |
 | `IndexerId` | Current `Indexers.Id` when the indexer exists, otherwise null |
 | `FailureSince` | Start of the current failed streak; cleared on recovery |
 | `LastFailureAt` | Most recent pass that observed a failed state |
 | `LastAttemptAt` | Last add/probe attempt |
 | `NextAttemptAt` | Earliest time the candidate may be probed again |
 | `LastAttemptResult` | `Passed` / `Failed` / `Removed` / `Suppressed` |
+| `LastEscalationLevel` | Escalation level observed on the previous pass, used to detect recovery |
+| `TrackingSince` | When this instance started being tracked; a streak can never predate it |
 | `RemovedAt` | When the automation deleted the indexer |
 | `Suppressed` / `SuppressedAt` | Manual-delete suppression and its timestamp |
 
@@ -106,14 +108,29 @@ An **empty dimension is unconstrained**, so enabling with only categories select
 
 ### 5.1 Failure tracking (removal input)
 
-Each pass reads `IndexerStatusService` for every enabled indexer and upserts a state row for it (keyed by its
-candidate key, with `IndexerId`). Failed means `EscalationLevel > 0`; recovered means `EscalationLevel == 0`. On the
-first pass that observes failure, `FailureSince = now`; on recovery it is cleared. This is deliberately independent of
-`InitialFailure`, which Prowlarr never clears on success.
+Each pass reads `IndexerStatusService` for every indexer and upserts a state row for it (keyed by its candidate key,
+with `IndexerId`). Failed means `EscalationLevel > 0`; recovered means `EscalationLevel == 0`. The streak start is
+adopted from `IndexerStatus.InitialFailure` only when a **new** episode begins (the previous pass saw escalation 0),
+clamped to `TrackingSince`; an existing streak is never re-anchored to an older `InitialFailure`, so a flaky indexer
+that oscillates between levels cannot be deleted one pass after a success. On recovery the streak is cleared. A disabled
+indexer's streak is cleared, so a stale timestamp can never remove an indexer on re-enable.
+
+A state row is bound to exactly one `IndexerId`. When several indexers share one definition key (multiple Newznab,
+Torznab or TorrentRss instances, or duplicates of any native indexer), only the bound instance is tracked. A row whose
+bound instance is deleted is released; a row whose instance is merely disabled keeps its binding — so a manual delete
+of a disabled indexer can still be mapped back and suppressed — while its streak ends and its tracking floor advances,
+so re-enabling can never resurrect the pre-disable episode. A newly bound instance never inherits the previous
+instance's streak or removal state. Rows are seeded for all existing indexers at startup and bound on
+`ProviderAddedEvent`, so a delete before the first pass is still suppressible.
 
 Accepted consequence: an indexer that is never queried never records failures and is therefore never removed.
 
 ### 5.2 Removal
+
+Recovery is `EscalationLevel == 0`, or any decrease of the escalation level between two passes (Prowlarr only
+decrements one level per successful query, so a decrease is the only between-pass recovery signal). Clearing the
+streak on a decrease does not resurrect a genuine long episode: the next failure starts a fresh streak at that
+moment, because `InitialFailure` is only adopted when the previous level was 0.
 
 When `now - FailureSince >= RemovalDays`, the indexer is deleted through `IIndexerFactory.Delete` (its status row is
 removed by the existing `ProviderDeletedEvent` handler). The state row records `RemovedAt`,
@@ -126,7 +143,8 @@ existing indexer counts as present whether enabled or disabled), not suppressed,
 past), and matching the criteria. Candidates are processed in key order, at most `MaxAddsPerPass` per pass:
 
 1. Clone the default definition; set `Enable = true`,
-   `AppProfileId = AppProfileService.GetDefaultProfile("Standard").Id`, priority 25.
+   `AppProfileId` = the **persisted** profile named `Standard` (falling back to the first persisted profile),
+   priority 25. `GetDefaultProfile` only constructs an unsaved profile with `Id = 0` and must not be used for this.
 2. **Probe the unsaved definition** (`Id = 0`) — the same path as the manual "Test" button, so nothing is persisted
    and no add/remove churn is pushed to apps.
 3. Pass → `Create(definition)`, record `Passed` with the new `IndexerId`, clear failure fields.
@@ -144,16 +162,22 @@ past), and matching the criteria. Candidates are processed in key order, at most
 ### 5.5 Credential detection
 
 - **Native definitions** — reflect `FieldDefinitionAttribute` over the settings contract; any `PrivacyLevel` of
-  `UserName`, `Password` or `ApiKey`, or any `FieldType.Password`, disqualifies the candidate.
+  `UserName`, `Password` or `ApiKey`, any `FieldType.Password`, or a property named `username`, `password`, `apikey`,
+  `api_key`, `cookie`, `rsskey`, `token`, `passkey` or `pid` disqualifies the candidate (some contracts carry secrets
+  without privacy metadata).
 - **Cardigann definitions** — disqualify when the YML has a `Login` block, or has a settings field whose `Type` is
-  `password` or whose name is one of `username`, `password`, `apikey`, `cookie`, `rsskey`, `token`. A definition with
-  no settings at all is credential-free when it has no `Login` block.
+  `password` or whose name is one of `username`, `password`, `apikey`, `cookie`, `rsskey`, `token`, `passkey`, `pid`.
+  A missing settings block alone does not disqualify: the injected username/password fields are optional, so a
+  login-free public definition can still pass a probe.
 
 ### 5.6 Suppression
 
 A manual delete sets `Suppressed = true` for that key. The service records its own in-flight deletions so the
-`ProviderDeletedEvent` handler can distinguish automation deletions from manual ones. Suppression is cleared by the
-explicit UI action, or automatically when an indexer with that key exists again (re-added by hand).
+`ProviderDeletedEvent` handler can distinguish automation deletions from manual ones. A state row is bound when an
+indexer is added (`ProviderAddedEvent`), so an indexer deleted between passes can still be suppressed. Suppression is
+cleared by the explicit UI action, or automatically when an indexer with that key exists again (re-added by hand);
+every phase except the suppression owner carries the persisted suppression forward so a concurrent manual delete is
+never overwritten by a stale in-memory row.
 
 ### 5.7 Idempotency and ordering
 
@@ -164,7 +188,7 @@ pass lock prevents overlap with a manual "Run now" trigger.
 
 | Route | Purpose |
 | --- | --- |
-| `GET /api/v1/indexer/automation` | Settings plus option lists (languages/privacy/protocols derived from candidates, category tree from the Newznab standard categories) |
+| `GET /api/v1/indexer/automation` | Settings only. The UI derives language options from `/indexer/schema` and the category tree from the existing indexer-categories store |
 | `PUT /api/v1/indexer/automation` | Validate and save settings |
 | `GET /api/v1/indexer/automation/state` | State rows for display (name, key, status, failureSince, nextAttemptAt, suppressed) |
 | `POST /api/v1/indexer/automation/run` | Enqueue the command manually |
@@ -186,9 +210,10 @@ Contents:
 
 ## 8. Error handling
 
-- **Probe timeout** — hard wall-clock cap via `Task.WhenAny(probe, Task.Delay(timeout))`. Because the definition is
-  unsaved (`Id = 0`), an abandoned probe cannot write status rows or cookies: both `UpdateCookies` and
-  `RecordFailure` guard on `id > 0`.
+- **Probe timeout** — hard wall-clock cap via `Task.Run(...)` plus `Task.Wait(timeout)`. The indexer test API has no
+  cancellation token, so an abandoned probe keeps running; its eventual fault is observed and logged so it cannot
+  surface as an unobserved task exception. Because the definition is unsaved (`Id = 0`), an abandoned probe cannot
+  write status rows or cookies: both `UpdateCookies` and `RecordFailure` guard on `id > 0`.
 - **Probe exception / validation failure / create failure** — logged and recorded as `Failed` with the message; never
   rethrown out of the pass.
 - **Delete failure** — logged and left unmodified so the next pass retries it.
@@ -205,7 +230,7 @@ Contents:
   under, exactly at, over), retry gating, `MaxAddsPerPass` cap, suppression on manual delete, no suppression on
   automation delete, complete no-op when disabled.
 - `IndexerAutomationProbe`: a slow fake indexer asserts `Failed` and that `Create` was never called.
-- Controller tests for `GET`/`PUT`, including range clamping.
+- Controller tests for `GET`/`PUT`/`state`/`run`/`DELETE`; clamping itself is covered by the settings-service fixture.
 - Frontend: manual verification only — the repository has no frontend test suite.
 
 ## 10. Accepted trade-offs

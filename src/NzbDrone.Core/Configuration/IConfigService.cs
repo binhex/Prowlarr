@@ -54,6 +54,17 @@ namespace NzbDrone.Core.Configuration
         // Indexers
         bool LogIndexerResponse { get; set; }
 
+        // Indexer Automation
+        bool IndexerAutomationEnabled { get; set; }
+        string IndexerAutomationProtocols { get; set; }
+        string IndexerAutomationLanguages { get; set; }
+        string IndexerAutomationPrivacy { get; set; }
+        string IndexerAutomationCategories { get; set; }
+        int IndexerAutomationTestTimeoutSeconds { get; set; }
+        int IndexerAutomationRetryDays { get; set; }
+        int IndexerAutomationRemovalDays { get; set; }
+        int IndexerAutomationMaxAddsPerPass { get; set; }
+
         CertificateValidationType CertificateValidation { get; }
         string ApplicationUrl { get; }
     }
